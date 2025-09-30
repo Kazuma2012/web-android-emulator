@@ -2,15 +2,15 @@ import express from 'express';
 import { WebSocketServer } from 'ws';
 import { RTCPeerConnection, RTCVideoSource, RTCVideoFrame } from 'wrtc';
 import RFB from 'node-rfb2';
+import { createCanvas, ImageData } from 'canvas';
 
 const app = express();
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
-
 const wss = new WebSocketServer({ port: 8081 });
 
-// VNCサーバー設定（Docker Android Emulator側）
+// VNC設定
 const VNC_HOST = 'localhost';
 const VNC_PORT = 5900;
 const VNC_PASSWORD = '';
@@ -35,12 +35,16 @@ wss.on('connection', ws => {
       const rfb = RFB.createConnection({ host: VNC_HOST, port: VNC_PORT, password: VNC_PASSWORD });
 
       rfb.on('rect', rect => {
-        // VNCフレームをWebRTCに変換（簡易例：黒画面）
-        const frame = new RTCVideoFrame(Buffer.alloc(rect.width*rect.height*4), rect.width, rect.height);
+        if(rect.encodingName !== 'raw') return;
+
+        const canvas = createCanvas(rect.width, rect.height);
+        const ctx = canvas.getContext('2d');
+        const imageData = new ImageData(new Uint8ClampedArray(rect.data), rect.width, rect.height);
+        ctx.putImageData(imageData, 0, 0);
+
+        const frame = new RTCVideoFrame(canvas.toBuffer('raw'), rect.width, rect.height);
         videoSource.onFrame(frame);
       });
-
-      rfb.on('error', e => console.error('VNC error', e));
 
       ws.on('message', inputMsg => {
         const input = JSON.parse(inputMsg.toString());
