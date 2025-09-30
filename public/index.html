@@ -16,9 +16,9 @@ const pc = new RTCPeerConnection();
 
 const canvas = document.getElementById('screen');
 const ctx = canvas.getContext('2d');
-
 const video = document.createElement('video');
 video.autoplay = true;
+
 video.onplay = () => {
   function draw() {
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
